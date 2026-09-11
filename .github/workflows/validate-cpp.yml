@@ -11,6 +11,9 @@ on:
 env:
   GTEST_COLOR: 1
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Build and Test [${{ matrix.toolchain }}][${{ matrix.mode }}]
@@ -30,7 +33,6 @@ jobs:
 
       - name: Unit tests
         run: ./unit_tests ${{ matrix.mode }}
-
 
   build_fuzzers:
     name: Build fuzzers [${{ matrix.toolchain }}][${{ matrix.mode }}]

@@ -86,6 +86,20 @@ ENUMS = {
         # Absolute nodes will resolve percentages against the inner size of
         # their containing node, not the padding box
         ("AbsolutePercentAgainstInnerSize", 1 << 2),
+        # Treat main-axis `min-{width,height}: undefined` as "no floor"
+        # instead of the CSS §4.5 automatic minimum (which derives a
+        # content-based floor from the item's min-content size). Set by
+        # default on new configs to preserve pre-§4.5 Yoga shrink behavior.
+        # Clear this bit to opt into the spec-correct CSS §4.5 floor.
+        ("MinSizeUndefinedInsteadOfAuto", 1 << 3),
+        # In the first free-space distribution pass, size each item against
+        # the running flex totals, which shrink as earlier items freeze,
+        # rather than against the totals captured before the pass began. This
+        # inflates the share offered to later items so they freeze
+        # spuriously, and makes the pass depend on child order. Set by
+        # default on new configs to preserve the pre-fix geometry. Clear this
+        # bit to opt into the spec-correct single distribution.
+        ("FlexFirstPassUsesRunningTotals", 1 << 4),
         # Enable all incorrect behavior (preserve compatibility)
         ("All", 0x7FFFFFFF),
         # Enable all errata except for "StretchFlexBasis" (Defaults behavior
@@ -95,7 +109,27 @@ ENUMS = {
 }
 
 # Temporary filter enums to not upgrade all enums at once
-KOTLIN_ENUM_NAMES = {"Direction"}
+KOTLIN_ENUM_NAMES = {
+    "Direction",
+    "Align",
+    "BoxSizing",
+    "Dimension",
+    "Display",
+    "Edge",
+    "Errata",
+    "ExperimentalFeature",
+    "FlexDirection",
+    "GridTrackType",
+    "Gutter",
+    "Justify",
+    "LogLevel",
+    "MeasureMode",
+    "NodeType",
+    "Overflow",
+    "PositionType",
+    "Unit",
+    "Wrap",
+}
 
 ENUMS_KOTLIN = {name: ENUMS[name] for name in KOTLIN_ENUM_NAMES}
 ENUMS_JAVA = {
@@ -294,6 +328,9 @@ for name, values in sorted(ENUMS_KOTLIN.items()):
     with open(root + "/java/com/facebook/yoga/Yoga%s.kt" % name, "w") as f:
         f.write(get_license("kotlin"))
         f.write("package com.facebook.yoga\n\n")
+        if name in DO_NOT_STRIP:
+            f.write("import com.facebook.yoga.annotations.DoNotStrip\n\n")
+            f.write("@DoNotStrip\n")
         f.write("public enum class Yoga%s(public val intValue: Int) {\n" % name)
         if len(values) > 0:
             for value in values:
@@ -311,6 +348,8 @@ for name, values in sorted(ENUMS_KOTLIN.items()):
         f.write("  public fun intValue(): Int = intValue\n")
         f.write("\n")
         f.write("  public companion object {\n")
+        if name in DO_NOT_STRIP:
+            f.write("    @DoNotStrip\n")
         f.write("    @JvmStatic\n")
         f.write("    public fun fromInt(value: Int): Yoga%s =\n" % name)
         f.write("        when (value) {\n")
